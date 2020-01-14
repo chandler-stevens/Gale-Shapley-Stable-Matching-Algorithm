@@ -7,6 +7,24 @@
 from timeit import timeit, repeat
 
 
+# Purpose: Get a valid element name from the user
+# Parameters: (string) message representing prompt to user
+#             (list of strings) takenNames representing taken names
+# Returns: (string) name representing valid name
+def getValidName(message, takenNames):
+    # Ask user until valid input given
+    while True:
+        # Prompt user for input
+        name = input(message)
+        # If user input is not empty and is not taken
+        if len(name) > 0 and name not in takenNames:
+            # Then, return the user input integer
+            return name
+        # Otherwise, notify user of out of invalid name
+        else:
+            print("INVALID: Please enter a valid name.")
+
+
 # Purpose: Get a valid integer from the user
 # Parameters: (string) message representing prompt to user
 #             (integer) minNum representing minimum allowed number
@@ -61,8 +79,10 @@ def getPreferences():
               setLetter + ":\n")
         # Ask user for element name
         for i in range(1, n + 1):
-            sets[setLetter][input("What is the name of element #" + str(i) +
-                                  " from set " + setLetter + "?\n\t")] = []
+            sets[setLetter][getValidName("What is the name of element #" +
+                                         str(i) + " from set " + setLetter +
+                                         "?\n\t",
+                                         list(sets[setLetter].keys()))] = []
 
     # Ask user for the preferences of each element for both sets
     for setLetter in sets:
@@ -114,51 +134,45 @@ def getPreferences():
 # Returns: yMatches (map) representing a possible stable matching
 def galeShapleyStableMatchingAlgorithm(n, setX, setY):
     # Declare map to represent prioritized preferences of each element of set Y
-    # Key: (integer) Modulated index (index + n) of elements of set Y
-    # Value: (map) Name and index of preference from set X of element of set Y
+    # Key: (string) Name of element y of set Y
+    # Value: (map) Name and index of preference from set X of y
     # Note: Maps are almost guaranteed a time complexity of O(1) for lookups,
     #       which offers high optimization of performance at the expense of
     #       space complexity, especially with nested maps as done here
     yPreferences = {}
     # Populate yPreferences map
     # Iterate through each element y in set Y and keep track of current index
-    # Note: The keys of the setY map are unused in this function
-    #       setY was declared a map in getPreferences() to allow for code reuse.
-    for i, preferences in enumerate(list(setY.values())):
+    for i, yTuple in enumerate(list(setY.items())):
         # Declare map to represent the prioritized preferences of y
         # Key: (string) Name of preference x from set X
         # Value: (integer) Index (priority level) of x
         priority = {}
         # Populate priority map
         # Iterate through each x in the preferences list of y
-        for j, preference in enumerate(preferences):
+        for j, preference in enumerate(yTuple[1]):
             # Add name of x and index of x to priority map
             priority[preference] = j
-        # Add modulated index of y and prioritized preferences map of y
-        #  to yPreferences map
-        yPreferences[i + n] = priority
+        # Add name of y and prioritized preferences map of y to yPreferences map
+        yPreferences[yTuple[0]] = priority
 
     # Free memory to reduce space complexity
-    del setY, preferences, j, preference, priority
-
-    # Extract list from setX map of the names of each element in set X
-    xNames = list(setX.keys())
+    del setY, j, preference, priority
 
     # Declare map to represent the currently unmatched elements of set X
     # Key: (integer) Index of element x from set X
-    # Value: (string) Name of x
+    # Value: (tuple) Pair including name of x and preferences from set Y of x
     xUnmatched = {}
     # Populate xUnmatched map
-    for i, x in enumerate(setX):
-        # Add index of x and name of x to xUnmatched map
-        xUnmatched[i] = setX[x]
+    for i, x in enumerate(list(setX.items())):
+        # Add index of x and name of x and preferences of x to xUnmatched map
+        xUnmatched[i] = x
 
     # Free memory to reduce space complexity
     del setX
 
     # Declare map to represent current existing matches
     # Key: (string) Name of element of set Y
-    # Value: (integer) Index of element of set X
+    # Value: (string) Name of element of set X
     yMatches = {}
 
     # Declare map to represent the currently matched elements of set X
@@ -175,8 +189,10 @@ def galeShapleyStableMatchingAlgorithm(n, setX, setY):
         xTuple = list(xUnmatched.items())[0]
         # Extract the index of x
         x = xTuple[0]
+        # Get name of x
+        xName = xTuple[1][0]
         # Extract the list of preferences from set Y
-        xPreferences = xTuple[1]
+        xPreferences = xTuple[1][1]
 
         # Initialize counter index to zero
         i = 0
@@ -191,7 +207,7 @@ def galeShapleyStableMatchingAlgorithm(n, setX, setY):
             if y not in yMatches:
                 # Then, match x with y
                 # Set the current match of y as x
-                yMatches[y] = x
+                yMatches[y] = xName
                 # Move x from the xUnmatched map to the xMatched map
                 xMatched[x] = xUnmatched.pop(x)
                 # Decrement the count of unmatched elements of set X
@@ -204,30 +220,25 @@ def galeShapleyStableMatchingAlgorithm(n, setX, setY):
                 yCurrentMatch = yMatches[y]
                 # Extract the list of preferences of y from the yPreferences map
                 yPreference = yPreferences[y]
-                # If the priority level of x is greater than
+                # If the priority level of x is higher than
                 #  the priority level of the current match of y
-                if yPreference[x] > yPreference[yCurrentMatch]:
+                if yPreference[xName] < yPreference[yCurrentMatch]:
                     # Move the current match of y from the xMatched map
                     #  to the xUnMatched map
                     xUnmatched[yCurrentMatch] = xMatched.pop(yCurrentMatch)
                     # Then, match x with y instead
                     # Set the current match of y as x
-                    yMatches[y] = x
+                    yMatches[y] = xName
                     # Move x from the xUnmatched map to the xMatched map
                     xMatched[x] = xUnmatched.pop(x)
                     # Note: Do not change xUnmatchedCount since the
                     #       net gain/loss is zero since one element
                     #       from x was matched while one other was unmatched.
-            # Increment the counter index to check the next remaining preference
-            i += 1
-    # Free memory to reduce space complexity
-    del n, i, xMatched, xUnmatchedCount, xUnmatched, \
-        xTuple, x, xPreferences, yPreferences
-
-    # Iterate through each match in the final result
-    for y in yMatches:
-        # Translate the index of each x to the respective name
-        yMatches[y] = xNames[yMatches[y]]
+                # Otherwise, if y does not prefer x over the current match of y
+                else:
+                    # Increment the counter index to check
+                    #  the next remaining preference
+                    i += 1
 
     # Return the final result of a possible stable matching
     #  between the preferences of set X and set Y
@@ -243,7 +254,7 @@ def displayResult(result):
     print("\n\nA possible stable matching between set X and set Y is:")
     # Display each match as "x matched with y"
     for y in result:
-        print(result[y] + " matched with " + y)
+        print(str(result[y]) + " matched with " + str(y))
 
 
 # Purpose: Measure execution time of Gale-Shapely Stable Matching Algorithm
@@ -292,16 +303,18 @@ def main():
         print("\nThe stable matching was determined in about\n" +
               str(round(measurePerformance(n, setX, setY, single), 6)) +
               " microseconds.")
+    # Do not immediately close program on user
+    input("Press any key to exit ...")
 
 
 # displayResult(
 #     galeShapleyStableMatchingAlgorithm(3,
-#                                        {"Ben": ["Rey", "Jyn", "Padme"],
-#                                         "Cassian": ["Jyn", "Rey", "Padme"],
-#                                         "Anakin": ["Padme", "Jyn", "Rey"]},
-#                                        {"Rey": ["Ben", "Anakin", "Cassian"],
-#                                         "Jyn": ["Cassian", "Anakin", "Ben"],
-#                                         "Padme": ["Anakin", "Ben", "Cassian"]}
+#                                        {"Anakin": ["Padme", "Jyn", "Rey"],
+#                                         "Ben": ["Rey", "Jyn", "Padme"],
+#                                         "Cassian": ["Jyn", "Rey", "Padme"]},
+#                                        {"Jyn": ["Cassian", "Anakin", "Ben"],
+#                                         "Padme": ["Anakin", "Ben", "Cassian"],
+#                                         "Rey": ["Ben", "Anakin", "Cassian"]}
 #                                        ))
 
 # print("The stable matching was determined in about\n" +
@@ -312,7 +325,7 @@ def main():
 #                                    {"Rey": ["Ben", "Anakin", "Cassian"],
 #                                     "Jyn": ["Cassian", "Anakin", "Ben"],
 #                                     "Padme": ["Anakin", "Ben", "Cassian"]},
-#                                     True),
+#                                    False),
 #                 6)) +
 #       " microseconds.")
 
