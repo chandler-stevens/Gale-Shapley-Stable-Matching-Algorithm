@@ -132,7 +132,7 @@ def getPreferences():
 #             (map) setX representing elements and preferences of set X
 #             (map) setY representing elements and preferences of set Y
 # Returns: yMatches (map) representing a possible stable matching
-def galeShapleyStableMatchingAlgorithm(n, setX, setY):
+def galeShapleyAlgorithm(n, setX, setY):
     # Declare map to represent prioritized preferences of each element of set Y
     # Key: (string) Name of element y of set Y
     # Value: (map) Name and index of preference from set X of y
@@ -159,13 +159,13 @@ def galeShapleyStableMatchingAlgorithm(n, setX, setY):
     del setY, j, preference, priority
 
     # Declare map to represent the currently unmatched elements of set X
-    # Key: (integer) Index of element x from set X
-    # Value: (tuple) Pair including name of x and preferences from set Y of x
+    # Key: (integer) Name of element x from set X
+    # Value: (tuple) Pair including index of x and preferences from set Y of x
     xUnmatched = {}
     # Populate xUnmatched map
-    for i, x in enumerate(list(setX.items())):
+    for i, x in enumerate(setX):
         # Add index of x and name of x and preferences of x to xUnmatched map
-        xUnmatched[i] = x
+        xUnmatched[x] = (i, setX[x])
 
     # Free memory to reduce space complexity
     del setX
@@ -176,8 +176,8 @@ def galeShapleyStableMatchingAlgorithm(n, setX, setY):
     yMatches = {}
 
     # Declare map to represent the currently matched elements of set X
-    # Key: (integer) Index of element x from set X
-    # Value: (string) Name of x
+    # Key: (integer) Name of element x from set X
+    # Value: (tuple) Pair including index of x and preferences from set Y of x
     xMatched = {}
 
     # Initialize count of unmatched elements of set X to n
@@ -187,10 +187,10 @@ def galeShapleyStableMatchingAlgorithm(n, setX, setY):
     while xUnmatchedCount > 0:
         # Get the first unmatched element x of set X
         xTuple = list(xUnmatched.items())[0]
-        # Extract the index of x
+        # Extract the name of x
         x = xTuple[0]
-        # Get name of x
-        xName = xTuple[1][0]
+        # Get index of x
+        xIndex = xTuple[1][0]
         # Extract the list of preferences from set Y
         xPreferences = xTuple[1][1]
 
@@ -207,8 +207,8 @@ def galeShapleyStableMatchingAlgorithm(n, setX, setY):
             if y not in yMatches:
                 # Then, match x with y
                 # Set the current match of y as x
-                yMatches[y] = xName
-                # Move x from the xUnmatched map to the xMatched map
+                yMatches[y] = x
+                # Move x name from the xUnmatched map to the xMatched map
                 xMatched[x] = xUnmatched.pop(x)
                 # Decrement the count of unmatched elements of set X
                 xUnmatchedCount -= 1
@@ -222,14 +222,14 @@ def galeShapleyStableMatchingAlgorithm(n, setX, setY):
                 yPreference = yPreferences[y]
                 # If the priority level of x is higher than
                 #  the priority level of the current match of y
-                if yPreference[xName] < yPreference[yCurrentMatch]:
+                if yPreference[x] < yPreference[yCurrentMatch]:
                     # Move the current match of y from the xMatched map
                     #  to the xUnMatched map
                     xUnmatched[yCurrentMatch] = xMatched.pop(yCurrentMatch)
                     # Then, match x with y instead
                     # Set the current match of y as x
-                    yMatches[y] = xName
-                    # Move x from the xUnmatched map to the xMatched map
+                    yMatches[y] = x
+                    # Move x name from the xUnmatched map to the xMatched map
                     xMatched[x] = xUnmatched.pop(x)
                     # Note: Do not change xUnmatchedCount since the
                     #       net gain/loss is zero since one element
@@ -266,13 +266,13 @@ def displayResult(result):
 def measurePerformance(n, setX, setY, single):
     if single:
         # Return the time of a single execution
-        return timeit(lambda: galeShapleyStableMatchingAlgorithm(n, setX, setY),
+        return timeit(lambda: galeShapleyAlgorithm(n, setX, setY),
                       number=1)
     else:
         # Return the shortest/fastest time of the three repetitions
         return min(
             # Perform three repetitions of one million iterations each
-            repeat(lambda: galeShapleyStableMatchingAlgorithm(n, setX, setY)))
+            repeat(lambda: galeShapleyAlgorithm(n, setX, setY)))
 
 
 # Purpose: Main function to prepare two sets and match them
@@ -282,7 +282,7 @@ def main():
     # Get the elements of set X and set Y and the preferences
     n, setX, setY = getPreferences()
     # Get a possible stable matching between the preferences of set X and set Y
-    stableMatching = galeShapleyStableMatchingAlgorithm(n, setX, setY)
+    stableMatching = galeShapleyAlgorithm(n, setX, setY)
     # Display the computed stable matching
     displayResult(stableMatching)
 
@@ -307,26 +307,70 @@ def main():
     input("Press any key to exit ...")
 
 
+# # RESULT OF BEST CASE: NO CONFLICTING TOP PREFERENCES
 # displayResult(
-#     galeShapleyStableMatchingAlgorithm(3,
-#                                        {"Anakin": ["Padme", "Jyn", "Rey"],
-#                                         "Ben": ["Rey", "Jyn", "Padme"],
-#                                         "Cassian": ["Jyn", "Rey", "Padme"]},
-#                                        {"Jyn": ["Cassian", "Anakin", "Ben"],
-#                                         "Padme": ["Anakin", "Ben", "Cassian"],
-#                                         "Rey": ["Ben", "Anakin", "Cassian"]}
-#                                        ))
-
+#     galeShapleyAlgorithm(4,
+#                          {"Ben": ["Rey", "Jyn", "Padme", "Leia"],
+#                           "Cassian": ["Jyn", "Leia", "Rey", "Padme"],
+#                           "Anakin": ["Padme", "Jyn", "Rey", "Leia"],
+#                           "Han": ["Leia", "Jyn", "Padme", "Rey"]},
+#                          {"Rey": ["Ben", "Anakin", "Han", "Cassian"],
+#                           "Jyn": ["Cassian", "Han", "Anakin", "Ben"],
+#                           "Padme": ["Anakin", "Han", "Cassian", "Ben"],
+#                           "Leia": ["Han", "Cassian", "Ben", "Anakin"]}
+#                          )
+# )
+#
+# # TIMING OF BEST CASE: NO CONFLICTING TOP PREFERENCES
 # print("The stable matching was determined in about\n" +
-#       str(round(measurePerformance(3,
-#                                    {"Ben": ["Rey", "Jyn", "Padme"],
-#                                     "Cassian": ["Jyn", "Rey", "Padme"],
-#                                     "Anakin": ["Padme", "Jyn", "Rey"]},
-#                                    {"Rey": ["Ben", "Anakin", "Cassian"],
-#                                     "Jyn": ["Cassian", "Anakin", "Ben"],
-#                                     "Padme": ["Anakin", "Ben", "Cassian"]},
-#                                    False),
-#                 6)) +
-#       " microseconds.")
+#       str(
+#           round(
+#               measurePerformance(4,
+#                                  {"Ben": ["Rey", "Jyn", "Padme", "Leia"],
+#                                   "Cassian": ["Jyn", "Leia", "Rey", "Padme"],
+#                                   "Anakin": ["Padme", "Jyn", "Rey", "Leia"],
+#                                   "Han": ["Leia", "Jyn", "Padme", "Rey"]},
+#                                  {"Rey": ["Ben", "Anakin", "Han", "Cassian"],
+#                                   "Jyn": ["Cassian", "Han", "Anakin", "Ben"],
+#                                   "Padme": ["Anakin", "Han", "Cassian", "Ben"],
+#                                   "Leia": ["Han", "Cassian", "Ben", "Anakin"]},
+#                                  False
+#                                  ),
+#               6)
+#       )
+#       + " microseconds.")
+#
+# # RESULT OF WORST CASE: COMPLETELY CONFLICTING TOP PREFERENCES
+# displayResult(
+#     galeShapleyAlgorithm(4,
+#                          {"Ben": ["Leia", "Padme", "Jyn", "Rey"],
+#                           "Cassian": ["Leia", "Padme", "Jyn", "Rey"],
+#                           "Anakin": ["Leia", "Padme", "Jyn", "Rey"],
+#                           "Han": ["Leia", "Padme", "Jyn", "Rey"]},
+#                          {"Rey": ["Han", "Anakin", "Cassian", "Ben"],
+#                           "Jyn": ["Han", "Anakin", "Cassian", "Ben"],
+#                           "Padme": ["Han", "Anakin", "Cassian", "Ben"],
+#                           "Leia": ["Han", "Anakin", "Cassian", "Ben"]}
+#                          )
+# )
+#
+# # TIMING OF WORST CASE: COMPLETELY CONFLICTING TOP PREFERENCES
+# print("The stable matching was determined in about\n" +
+#       str(
+#           round(
+#               measurePerformance(4,
+#                                  {"Ben": ["Leia", "Padme", "Jyn", "Rey"],
+#                                   "Cassian": ["Leia", "Padme", "Jyn", "Rey"],
+#                                   "Anakin": ["Leia", "Padme", "Jyn", "Rey"],
+#                                   "Han": ["Leia", "Padme", "Jyn", "Rey"]},
+#                                  {"Rey": ["Han", "Anakin", "Cassian", "Ben"],
+#                                   "Jyn": ["Han", "Anakin", "Cassian", "Ben"],
+#                                   "Padme": ["Han", "Anakin", "Cassian", "Ben"],
+#                                   "Leia": ["Han", "Anakin", "Cassian", "Ben"]},
+#                                  False
+#                                  ),
+#               6)
+#       )
+#       + " microseconds.")
 
 main()
