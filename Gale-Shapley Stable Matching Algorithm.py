@@ -160,12 +160,12 @@ def galeShapleyAlgorithm(n, setX, setY):
 
     # Declare map to represent the currently unmatched elements of set X
     # Key: (integer) Name of element x from set X
-    # Value: (tuple) Pair including index of x and preferences from set Y of x
+    # Value: (list of strings) Preferences from set Y of x
     xUnmatched = {}
     # Populate xUnmatched map
     for i, x in enumerate(setX):
-        # Add index of x and name of x and preferences of x to xUnmatched map
-        xUnmatched[x] = (i, setX[x])
+        # Add preferences of x to xUnmatched map
+        xUnmatched[x] = setX[x]
 
     # Free memory to reduce space complexity
     del setX
@@ -177,7 +177,7 @@ def galeShapleyAlgorithm(n, setX, setY):
 
     # Declare map to represent the currently matched elements of set X
     # Key: (integer) Name of element x from set X
-    # Value: (tuple) Pair including index of x and preferences from set Y of x
+    # Value: (list of strings) Preferences from set Y of x
     xMatched = {}
 
     # Initialize count of unmatched elements of set X to n
@@ -189,10 +189,8 @@ def galeShapleyAlgorithm(n, setX, setY):
         xTuple = list(xUnmatched.items())[0]
         # Extract the name of x
         x = xTuple[0]
-        # Get index of x
-        xIndex = xTuple[1][0]
         # Extract the list of preferences from set Y
-        xPreferences = xTuple[1][1]
+        xPreferences = xTuple[1]
 
         # Initialize counter index to zero
         i = 0
